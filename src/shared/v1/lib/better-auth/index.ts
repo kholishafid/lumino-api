@@ -3,15 +3,15 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth";
 
-import * as accountSchema from "../db/schema/account";
-import * as taskSchema from "../db/schema/task";
+import * as accountSchema from "../../../../integrations/db/schema/account";
+import * as taskSchema from "../../../../integrations/db/schema/task";
 import { openAPI } from "better-auth/plugins";
 
 export const auth = (
   env: CloudflareBindings
 ): ReturnType<typeof betterAuth> => {
   const sql = neon(env.DATABASE_URL);
-  const db = drizzle(sql);
+  const db = drizzle(sql, { schema: { ...accountSchema, ...taskSchema } });
 
   return betterAuth({
     appName: "Task Tracker",

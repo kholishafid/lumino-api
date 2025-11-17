@@ -19,4 +19,13 @@ const updateTaskValidator = sValidator(
   })
 );
 
-export { createTaskValidator, updateTaskValidator };
+const addSubtaskValidator = sValidator(
+  "json",
+  z.object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().min(1, "Description is required"),
+    due_date: z.coerce.date().optional(),
+  })
+);
+
+export { createTaskValidator, updateTaskValidator, addSubtaskValidator };
