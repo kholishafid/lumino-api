@@ -1,11 +1,21 @@
-import { Database } from "./";
+import { Database, EnvContext } from "./";
 import { task as taskSchema } from "@/integrations/db/schema/task";
 import { subtask as subtaskSchema } from "@/integrations/db/schema/subtask";
-import { desc, eq, InferSelectModel } from "drizzle-orm";
+import { and, desc, eq, inArray, InferSelectModel } from "drizzle-orm";
+import { getSession } from "../lib/session";
 
-export const taskService = (db: Database) => {
+export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
   return {
     async getTaskById(id: string) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const task = await db
         .select({
           task: taskSchema,
@@ -13,7 +23,9 @@ export const taskService = (db: Database) => {
         })
         .from(taskSchema)
         .leftJoin(subtaskSchema, eq(taskSchema.id, subtaskSchema.taskId))
-        .where(eq(taskSchema.id, id))
+        .where(
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+        )
         .limit(1)
         .execute();
 
@@ -36,13 +48,28 @@ export const taskService = (db: Database) => {
         },
       };
     },
-    async getTasks() {
+
+    async getTasks({ isFinished }: { isFinished?: boolean }) {
+      const session = await getSession(c);
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const data = await db
         .select({
           task: taskSchema,
           subtask: subtaskSchema,
         })
         .from(taskSchema)
+        .where(
+          and(
+            eq(taskSchema.createdBy, session.user.id),
+            isFinished !== undefined ? eq(taskSchema.isFinished, isFinished) : undefined,
+          ),
+        )
         .orderBy(desc(taskSchema.createdAt))
         .leftJoin(subtaskSchema, eq(taskSchema.id, subtaskSchema.taskId));
 
@@ -68,32 +95,71 @@ export const taskService = (db: Database) => {
         }
       }
 
-      return Object.values(mappedData).map(({ task, subtasks }) => ({
-        ...task,
-        subtasks,
-      }));
+      return {
+        message: "Tasks retrieved successfully",
+        success: true,
+        data: Object.values(mappedData).map((item) => ({
+          ...item.task,
+          subtasks: item.subtasks,
+        })),
+      };
     },
-    async createTask(title: string, description: string, due_date?: Date) {
-      return await db
+
+    async createTask(
+      title: string,
+      description: string,
+      due_date?: Date,
+      priority?: "low" | "medium" | "high",
+    ) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
+      const inserted = await db
         .insert(taskSchema)
         .values({
           id: crypto.randomUUID(),
           title,
           description,
           dueDate: due_date,
+          createdBy: session.user.id,
+          priority: priority || "medium",
         })
         .returning();
+
+      return {
+        message: "Task created successfully",
+        success: true,
+        data: inserted[0],
+      };
     },
+
     async updateTask(
       id: string,
       title?: string,
       description?: string,
-      due_date?: Date
+      due_date?: Date,
     ) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const target = await db
         .select()
         .from(taskSchema)
-        .where(eq(taskSchema.id, id))
+        .where(
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+        )
         .execute();
 
       if (target.length === 0) {
@@ -119,11 +185,23 @@ export const taskService = (db: Database) => {
         success: true,
       };
     },
+
     async deleteTask(id: string) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const target = await db
         .select()
         .from(taskSchema)
-        .where(eq(taskSchema.id, id))
+        .where(
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+        )
         .execute();
 
       if (target.length === 0) {
@@ -134,27 +212,42 @@ export const taskService = (db: Database) => {
       }
       const deleted = await db
         .delete(taskSchema)
-        .where(eq(taskSchema.id, id))
+        .where(
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+        )
         .returning();
 
       return {
         message: `Task with id: ${id} deleted successfully`,
-        data: deleted,
+        data: deleted[0],
         success: true,
       };
     },
+
     async addSubtask(
       id: string,
       subtask: {
         title: string;
         description: string;
         due_date?: Date;
-      }
+        priority?: "low" | "medium" | "high";
+      },
     ) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const target = await db
         .select()
         .from(taskSchema)
-        .where(eq(taskSchema.id, id))
+        .where(
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+        )
         .execute();
 
       if (target.length === 0) {
@@ -172,14 +265,55 @@ export const taskService = (db: Database) => {
           description: subtask.description,
           dueDate: subtask.due_date,
           taskId: id,
+          createdBy: session.user.id,
+          priority: subtask.priority || "medium",
         })
         .returning();
 
       return {
         message: `Subtask added to task with id: ${id} successfully`,
         success: true,
-        data: inserted,
+        data: inserted[0],
       };
+    },
+
+    async markTasksAsFinished(ids: string | string[]) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
+      const idsArray = Array.isArray(ids) ? ids : [ids];
+
+      try {
+        const updated = await db
+          .update(taskSchema)
+          .set({ isFinished: true })
+          .where(
+            and(
+              eq(taskSchema.createdBy, session.user.id),
+              inArray(taskSchema.id, idsArray),
+            ),
+          )
+          .returning();
+        return {
+          message: `Subtask ${idsArray.join(
+            ", ",
+          )} marked as finished successfully`,
+          success: true,
+          data: updated.map((item) => item.id),
+        };
+      } catch (error) {
+        return {
+          message: `Failed to mark subtasks as finished`,
+          success: false,
+          data: error,
+        };
+      }
     },
   };
 };

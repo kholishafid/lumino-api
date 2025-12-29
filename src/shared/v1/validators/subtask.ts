@@ -1,6 +1,13 @@
 import { sValidator } from "@hono/standard-validator";
 import z from "zod";
 
+const getSubtaskQueryValidator = sValidator(
+  "query",
+  z.object({
+    taskId: z.string().optional(),
+  })
+);  
+
 const createSubtaskValidator = sValidator(
   "json",
   z.object({
@@ -20,4 +27,4 @@ const updateSubtaskValidator = sValidator(
   })
 );
 
-export { createSubtaskValidator, updateSubtaskValidator };
+export { getSubtaskQueryValidator, createSubtaskValidator, updateSubtaskValidator };

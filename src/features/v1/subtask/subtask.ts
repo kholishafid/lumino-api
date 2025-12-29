@@ -3,24 +3,26 @@ import { res } from "@/shared/v1/lib/response";
 import { Services } from "@/shared/v1/services";
 import {
   createSubtaskValidator,
+  getSubtaskQueryValidator,
   updateSubtaskValidator,
 } from "@/shared/v1/validators/subtask";
 import { OpenAPIHono } from "@hono/zod-openapi";
 
 const subtaskRoute = new OpenAPIHono<Env>();
 
-subtaskRoute.get("/subtasks", async (c) => {
+subtaskRoute.get("/subtasks", getSubtaskQueryValidator, async (c) => {
+  const { taskId } = c.req.valid("query");
   const service = new Services(c);
 
-  const subtasks = await service.subtask().getSubtasks();
+  const { message, success, data } = await service.subtask().getSubtasks(taskId);
 
   return c.json(
     res({
-      status: "success",
-      message: "Subtasks retrieved successfully",
-      data: subtasks,
-    }),
-    200
+      status: success ? "success" : "fail",
+      message: message,
+      data: data,
+      }),
+    success ? 200 : 404
   );
 });
 

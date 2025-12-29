@@ -1,15 +1,30 @@
-import { Database } from "./";
+import { Database, EnvContext } from "./";
 import { subtask as subtaskSchema } from "@/integrations/db/schema/subtask";
 import { task as taskSchema } from "@/integrations/db/schema/task";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { getSession } from "../lib/session";
 
-export const subTaskService = (db: Database) => {
+export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
   return {
     async getSubtaskById(id: string) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const subtask = await db
         .select()
         .from(subtaskSchema)
-        .where(eq(subtaskSchema.id, id))
+        .where(
+          and(
+            eq(subtaskSchema.id, id),
+            eq(subtaskSchema.createdBy, session.user.id)
+          )
+        )
         .limit(1)
         .execute();
 
@@ -26,12 +41,26 @@ export const subTaskService = (db: Database) => {
         data: subtask[0],
       };
     },
-    async getSubtasks() {
+    async getSubtasks(taskId?: string) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const data = await db
         .select()
         .from(subtaskSchema)
         .orderBy(desc(subtaskSchema.createdAt))
-        .execute();
+        .where(
+          and(
+            eq(subtaskSchema.createdBy, session.user.id),
+            taskId ? eq(subtaskSchema.taskId, taskId) : undefined
+          )
+        );
 
       return {
         message: `Subtasks retrieved successfully`,
@@ -50,6 +79,15 @@ export const subTaskService = (db: Database) => {
       };
       taskId: string;
     }) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const task = await db
         .select()
         .from(taskSchema)
@@ -71,6 +109,7 @@ export const subTaskService = (db: Database) => {
           description,
           dueDate: due_date,
           taskId: taskId,
+          createdBy: session.user.id,
         })
         .returning();
 
@@ -86,10 +125,24 @@ export const subTaskService = (db: Database) => {
       description?: string,
       due_date?: Date
     ) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const target = await db
         .select()
         .from(subtaskSchema)
-        .where(eq(subtaskSchema.id, id))
+        .where(
+          and(
+            eq(subtaskSchema.id, id),
+            eq(subtaskSchema.createdBy, session.user.id)
+          )
+        )
         .execute();
 
       if (target.length === 0) {
@@ -115,11 +168,26 @@ export const subTaskService = (db: Database) => {
         success: true,
       };
     },
+
     async deleteSubtask(id: string) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
       const target = await db
         .select()
         .from(subtaskSchema)
-        .where(eq(subtaskSchema.id, id))
+        .where(
+          and(
+            eq(subtaskSchema.id, id),
+            eq(subtaskSchema.createdBy, session.user.id)
+          )
+        )
         .execute();
 
       if (target.length === 0) {
@@ -128,14 +196,19 @@ export const subTaskService = (db: Database) => {
           message: `Subtask with id: ${id} not found`,
         };
       }
-      const deleted = await db
+
+      await db
         .delete(subtaskSchema)
-        .where(eq(subtaskSchema.id, id))
+        .where(
+          and(
+            eq(subtaskSchema.id, id),
+            eq(subtaskSchema.createdBy, session.user.id)
+          )
+        )
         .returning();
 
       return {
         message: `Subtask with id: ${id} deleted successfully`,
-        data: deleted,
         success: true,
       };
     },

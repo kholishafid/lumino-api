@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run cf-gen-types && wrangler secret bulk .dev.vars.production && wrangler deploy --minify",
-    "cf-gen-types": "wrangler types --env-interface CloudflareBindings"
+    "cf-gen-types": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@hono/standard-validator": "^0.1.5",
