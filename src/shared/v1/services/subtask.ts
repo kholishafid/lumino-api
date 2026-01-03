@@ -1,7 +1,7 @@
 import { Database, EnvContext } from "./";
 import { subtask as subtaskSchema } from "@/integrations/db/schema/subtask";
 import { task as taskSchema } from "@/integrations/db/schema/task";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { getSession } from "../lib/session";
 
 export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
@@ -22,8 +22,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .where(
           and(
             eq(subtaskSchema.id, id),
-            eq(subtaskSchema.createdBy, session.user.id)
-          )
+            eq(subtaskSchema.createdBy, session.user.id),
+          ),
         )
         .limit(1)
         .execute();
@@ -41,7 +41,13 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         data: subtask[0],
       };
     },
-    async getSubtasks(taskId?: string) {
+    async getSubtasks({
+      taskId,
+      isFinished,
+    }: {
+      taskId?: string;
+      isFinished?: boolean;
+    }) {
       const session = await getSession(c);
 
       if (!session || !session.user) {
@@ -57,9 +63,12 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .orderBy(desc(subtaskSchema.createdAt))
         .where(
           and(
+            taskId ? eq(subtaskSchema.taskId, taskId) : undefined,
             eq(subtaskSchema.createdBy, session.user.id),
-            taskId ? eq(subtaskSchema.taskId, taskId) : undefined
-          )
+            isFinished !== undefined
+              ? eq(subtaskSchema.isFinished, isFinished)
+              : undefined,
+          ),
         );
 
       return {
@@ -69,13 +78,13 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       };
     },
     async createSubtask({
-      subtask: { title, description, due_date },
+      subtask: { title, description, dueDate },
       taskId,
     }: {
       subtask: {
         title: string;
         description: string;
-        due_date: Date | undefined;
+        dueDate: Date | undefined;
       };
       taskId: string;
     }) {
@@ -107,7 +116,7 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
           id: crypto.randomUUID(),
           title,
           description,
-          dueDate: due_date,
+          dueDate: dueDate,
           taskId: taskId,
           createdBy: session.user.id,
         })
@@ -123,7 +132,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       id: string,
       title?: string,
       description?: string,
-      due_date?: Date
+      dueDate?: Date,
+      isFinished?: boolean,
     ) {
       const session = await getSession(c);
 
@@ -140,8 +150,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .where(
           and(
             eq(subtaskSchema.id, id),
-            eq(subtaskSchema.createdBy, session.user.id)
-          )
+            eq(subtaskSchema.createdBy, session.user.id),
+          ),
         )
         .execute();
 
@@ -157,7 +167,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .set({
           title,
           description,
-          dueDate: due_date,
+          dueDate: dueDate,
+          isFinished,
         })
         .where(eq(subtaskSchema.id, id))
         .returning();
@@ -185,8 +196,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .where(
           and(
             eq(subtaskSchema.id, id),
-            eq(subtaskSchema.createdBy, session.user.id)
-          )
+            eq(subtaskSchema.createdBy, session.user.id),
+          ),
         )
         .execute();
 
@@ -202,8 +213,8 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .where(
           and(
             eq(subtaskSchema.id, id),
-            eq(subtaskSchema.createdBy, session.user.id)
-          )
+            eq(subtaskSchema.createdBy, session.user.id),
+          ),
         )
         .returning();
 
@@ -211,6 +222,45 @@ export const subTaskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         message: `Subtask with id: ${id} deleted successfully`,
         success: true,
       };
+    },
+
+    async markTasksAsFinished(ids: string | string[]) {
+      const session = await getSession(c);
+
+      if (!session || !session.user) {
+        return {
+          success: false,
+          message: "Unauthorized",
+        };
+      }
+
+      const idsArray = Array.isArray(ids) ? ids : [ids];
+
+      try {
+        const updated = await db
+          .update(subtaskSchema)
+          .set({ isFinished: true })
+          .where(
+            and(
+              eq(subtaskSchema.createdBy, session.user.id),
+              inArray(subtaskSchema.id, idsArray),
+            ),
+          )
+          .returning();
+        return {
+          message: `Subtask ${idsArray.join(
+            ", ",
+          )} marked as finished successfully`,
+          success: true,
+          data: updated.map((item) => item.id),
+        };
+      } catch (error) {
+        return {
+          message: `Failed to mark subtasks as finished`,
+          success: false,
+          data: error,
+        };
+      }
     },
   };
 };

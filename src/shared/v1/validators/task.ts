@@ -13,7 +13,7 @@ const createTaskValidator = sValidator(
   z.object({
     title: z.string().min(1, "Title is required"),
     description: z.string(),
-    due_date: z.coerce.date().optional(),
+    dueDate: z.coerce.date().optional(),
     priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
   }),
 );
@@ -23,7 +23,8 @@ const updateTaskValidator = sValidator(
   z.object({
     title: z.string().min(1, "Title is required").optional(),
     description: z.string().optional(),
-    due_date: z.coerce.date().optional(),
+    dueDate: z.coerce.date().optional(),
+    priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
   }),
 );
 
@@ -32,7 +33,7 @@ const addSubtaskValidator = sValidator(
   z.object({
     title: z.string().min(1, "Title is required"),
     description: z.string(),
-    due_date: z.coerce.date().optional(),
+    dueDate: z.coerce.date().optional(),
     priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
   }),
 );

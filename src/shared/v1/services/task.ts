@@ -24,7 +24,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .from(taskSchema)
         .leftJoin(subtaskSchema, eq(taskSchema.id, subtaskSchema.taskId))
         .where(
-          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id))
         )
         .limit(1)
         .execute();
@@ -67,8 +67,10 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .where(
           and(
             eq(taskSchema.createdBy, session.user.id),
-            isFinished !== undefined ? eq(taskSchema.isFinished, isFinished) : undefined,
-          ),
+            isFinished !== undefined
+              ? eq(taskSchema.isFinished, isFinished)
+              : undefined
+          )
         )
         .orderBy(desc(taskSchema.createdAt))
         .leftJoin(subtaskSchema, eq(taskSchema.id, subtaskSchema.taskId));
@@ -108,8 +110,8 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
     async createTask(
       title: string,
       description: string,
-      due_date?: Date,
-      priority?: "low" | "medium" | "high",
+      dueDate?: Date,
+      priority?: "low" | "medium" | "high"
     ) {
       const session = await getSession(c);
 
@@ -126,7 +128,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
           id: crypto.randomUUID(),
           title,
           description,
-          dueDate: due_date,
+          dueDate: dueDate,
           createdBy: session.user.id,
           priority: priority || "medium",
         })
@@ -143,7 +145,8 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       id: string,
       title?: string,
       description?: string,
-      due_date?: Date,
+      dueDate?: Date,
+      priority?: "low" | "medium" | "high"
     ) {
       const session = await getSession(c);
 
@@ -158,7 +161,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .select()
         .from(taskSchema)
         .where(
-          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id))
         )
         .execute();
 
@@ -169,12 +172,18 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         };
       }
 
+      console.log("Updating", {
+        title,
+        description,
+        dueDate,
+      })
       const updated = await db
         .update(taskSchema)
         .set({
           title,
           description,
-          dueDate: due_date,
+          dueDate: dueDate,
+          priority,
         })
         .where(eq(taskSchema.id, id))
         .returning();
@@ -186,7 +195,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       };
     },
 
-    async deleteTask(id: string) {
+    async deleteTask(id: string | string[]) {
       const session = await getSession(c);
 
       if (!session || !session.user) {
@@ -200,7 +209,10 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .select()
         .from(taskSchema)
         .where(
-          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+          and(
+            inArray(taskSchema.id, Array.isArray(id) ? id : [id]),
+            eq(taskSchema.createdBy, session.user.id)
+          )
         )
         .execute();
 
@@ -213,7 +225,10 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       const deleted = await db
         .delete(taskSchema)
         .where(
-          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+          and(
+            inArray(taskSchema.id, Array.isArray(id) ? id : [id]),
+            eq(taskSchema.createdBy, session.user.id)
+          )
         )
         .returning();
 
@@ -229,9 +244,9 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
       subtask: {
         title: string;
         description: string;
-        due_date?: Date;
+        dueDate?: Date;
         priority?: "low" | "medium" | "high";
-      },
+      }
     ) {
       const session = await getSession(c);
 
@@ -246,7 +261,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
         .select()
         .from(taskSchema)
         .where(
-          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id)),
+          and(eq(taskSchema.id, id), eq(taskSchema.createdBy, session.user.id))
         )
         .execute();
 
@@ -263,7 +278,7 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
           id: crypto.randomUUID(),
           title: subtask.title,
           description: subtask.description,
-          dueDate: subtask.due_date,
+          dueDate: subtask.dueDate,
           taskId: id,
           createdBy: session.user.id,
           priority: subtask.priority || "medium",
@@ -296,20 +311,20 @@ export const taskService = ({ db, c }: { db: Database; c: EnvContext }) => {
           .where(
             and(
               eq(taskSchema.createdBy, session.user.id),
-              inArray(taskSchema.id, idsArray),
-            ),
+              inArray(taskSchema.id, idsArray)
+            )
           )
           .returning();
         return {
-          message: `Subtask ${idsArray.join(
-            ", ",
+          message: `Task ${idsArray.join(
+            ", "
           )} marked as finished successfully`,
           success: true,
           data: updated.map((item) => item.id),
         };
       } catch (error) {
         return {
-          message: `Failed to mark subtasks as finished`,
+          message: `Failed to mark tasks as finished`,
           success: false,
           data: error,
         };

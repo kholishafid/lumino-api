@@ -15,7 +15,7 @@ const taskRoute = new OpenAPIHono<Env>();
 taskRoute.get("/tasks", getTaskQueryValidator, async (c) => {
   const { isFinished } = c.req.valid("query");
   const service = new Services(c);
-  console.log(isFinished)
+  console.log(isFinished);
   const { message, success, data } = await service.task().getTasks({
     isFinished:
       isFinished === "true" ? true : isFinished === "false" ? false : undefined,
@@ -27,17 +27,17 @@ taskRoute.get("/tasks", getTaskQueryValidator, async (c) => {
       message: message,
       data: data,
     }),
-    success ? 200 : 404
+    success ? 200 : 404,
   );
 });
 
 taskRoute.post("/tasks", createTaskValidator, async (c) => {
-  const { title, description, due_date, priority } = c.req.valid("json");
+  const { title, description, dueDate, priority } = c.req.valid("json");
   const service = new Services(c);
 
   const { message, success, data } = await service
     .task()
-    .createTask(title, description, due_date, priority);
+    .createTask(title, description, dueDate, priority);
 
   return c.json(
     res({
@@ -45,7 +45,7 @@ taskRoute.post("/tasks", createTaskValidator, async (c) => {
       message,
       data: data,
     }),
-    201
+    201,
   );
 });
 
@@ -63,7 +63,7 @@ taskRoute.post("/tasks/mark-finished", markAsFinishedValidator, async (c) => {
       message: message,
       data: data,
     }),
-    200
+    200,
   );
 });
 
@@ -79,19 +79,19 @@ taskRoute.get("/tasks/:id", async (c) => {
       message: message,
       data: data,
     }),
-    success ? 200 : 404
+    success ? 200 : 404,
   );
 });
 
 taskRoute.post("/tasks/:id", addSubtaskValidator, async (c) => {
-  const { title, description, due_date, priority } = c.req.valid("json");
+  const { title, description, dueDate, priority } = c.req.valid("json");
   const service = new Services(c);
 
   const { id } = c.req.param();
 
   const { message, success, data } = await service
     .task()
-    .addSubtask(id, { title, description, due_date, priority });
+    .addSubtask(id, { title, description, dueDate, priority });
 
   return c.json(
     res({
@@ -99,21 +99,21 @@ taskRoute.post("/tasks/:id", addSubtaskValidator, async (c) => {
       message: message,
       data: data,
     }),
-    success ? 201 : 400
+    success ? 201 : 400,
   );
 });
 
 taskRoute.put("/tasks/:id", updateTaskValidator, async (c) => {
   const { id } = c.req.param();
-  const { title, description, due_date } = c.req.valid("json");
+  const { title, description, dueDate, priority } = c.req.valid("json");
 
-  if (!title && !description && !due_date) {
+  if (!title && !description && !dueDate) {
     return c.json(
       res({
         status: "fail",
         message: "Nothing to update",
       }),
-      200
+      200,
     );
   }
 
@@ -121,7 +121,7 @@ taskRoute.put("/tasks/:id", updateTaskValidator, async (c) => {
 
   const { success, message, data } = await service
     .task()
-    .updateTask(id, title, description, due_date);
+    .updateTask(id, title, description, dueDate, priority);
 
   return c.json(
     res({
@@ -129,7 +129,7 @@ taskRoute.put("/tasks/:id", updateTaskValidator, async (c) => {
       message: message,
       data: data,
     }),
-    200
+    200,
   );
 });
 
@@ -145,7 +145,7 @@ taskRoute.delete("/tasks/:id", async (c) => {
       message: message,
       data: data,
     }),
-    200
+    200,
   );
 });
 
