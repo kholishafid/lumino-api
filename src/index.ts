@@ -18,7 +18,7 @@ const app = new OpenAPIHono<Env>();
 
 // middleware
 app.use(logger());
-app.use("/api/v1/*", (c, next) => {
+app.use("/api/*", (c, next) => {
   const isProd = c.env.ENVIRONTMENT === "production";
   return corsMiddleware(isProd)(c, next);
 });
