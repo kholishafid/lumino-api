@@ -16,20 +16,6 @@ export type Env = {
 
 const app = new OpenAPIHono<Env>();
 
-// middleware
-app.use(logger());
-app.use("/api/*", (c, next) => {
-  const isProd = c.env.ENVIRONTMENT === "production";
-  return corsMiddleware(isProd)(c, next);
-});
-app.use("/api/*", authMiddleware);
-
-// routes
-app.route("/", routesV1);
-app.get("/", (c) => {
-  return c.text("🐇 Running...");
-});
-
 // OpenAPI Documentation
 app.doc("/api/v1/doc", {
   openapi: "3.0.0",
@@ -51,6 +37,17 @@ app.get(
     ],
   })
 );
+
+// middleware
+app.use(logger());
+app.use("/api/*", corsMiddleware);
+app.use("/api/*", authMiddleware);
+
+// routes
+app.route("/", routesV1);
+app.get("/", (c) => {
+  return c.text("🐇 Running...");
+});
 
 showRoutes(app);
 
