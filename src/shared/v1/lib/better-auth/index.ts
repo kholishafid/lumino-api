@@ -16,7 +16,10 @@ export const auth = (
   return betterAuth({
     appName: "Task Tracker",
     basePath: "/api/v1/auth/",
-    trustedOrigins: ["http://localhost:3000", "http://localhost:5000"],
+    trustedOrigins:
+      env.ENVIRONMENT === "production"
+        ? ["https://lumino.kholishafid.com", "https://lumino.pages.dev"]
+        : ["http://localhost:5000"],
     emailAndPassword: {
       enabled: true,
     },
