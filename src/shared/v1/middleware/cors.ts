@@ -7,6 +7,8 @@ export const corsMiddleware = cors({
         ? ["https://lumino.kholishafid.com", "https://lumino.pages.dev"]
         : ["http://localhost:5000"];
 
+    if (!origin) return allowed[0];
+
     return allowed.includes(origin) ? origin : null;
   },
   allowHeaders: ["Content-Type", "Authorization"],

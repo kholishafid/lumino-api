@@ -27,7 +27,6 @@ export const auth = (
       defaultCookieAttributes: {
         sameSite: "none",
         secure: true,
-        partitioned: true,
       },
     },
     database: drizzleAdapter(db, {
