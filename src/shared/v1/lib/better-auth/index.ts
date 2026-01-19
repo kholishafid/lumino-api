@@ -18,7 +18,7 @@ export const auth = (
     basePath: "/api/v1/auth/",
     trustedOrigins:
       env.ENVIRONMENT === "production"
-        ? ["https://lumino.kholishafid.com", "https://lumino.pages.dev"]
+        ? ["https://lumino.kholishafid.com", "https://lumino.pages.dev", "https://lumino-api.itsmaehere.workers.dev"]
         : ["http://localhost:5000"],
     emailAndPassword: {
       enabled: true,
