@@ -7,7 +7,6 @@ import { authMiddleware } from "./shared/v1/middleware/auth";
 import { corsMiddleware } from "./shared/v1/middleware/cors";
 
 export type Env = {
-  Bindings: CloudflareBindings;
   Variables: {
     user: any;
     session: any;

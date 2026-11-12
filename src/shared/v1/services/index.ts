@@ -1,21 +1,19 @@
 import { Context } from "hono";
 import { Env } from "@/index";
-import { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { taskService } from "./task";
 import { subTaskService } from "./subtask";
 import { task } from "@/integrations/db/schema/task";
 import { subtask } from "@/integrations/db/schema/subtask";
+import { pool } from "@/integrations/db/client";
 
 const schema = {
   task,
   subtask,
 };
 
-export type Database = NeonHttpDatabase<typeof schema> & {
-  $client: ReturnType<typeof neon>;
-};
+export type Database = NodePgDatabase<typeof schema>;
 
 export type EnvContext = Context<Env>;
 
@@ -25,8 +23,7 @@ export class Services {
 
   constructor(c: EnvContext) {
     this.context = c;
-    const sql = neon(c.env.DATABASE_URL);
-    const db = drizzle(sql, {
+    const db = drizzle(pool, {
       schema,
     });
 

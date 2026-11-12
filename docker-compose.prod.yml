@@ -1,0 +1,11 @@
+services:
+  api:
+    image: ${IMAGE_NAME:?IMAGE_NAME must be set}:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "${VPS_PORT:-3000}:3000"

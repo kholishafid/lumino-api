@@ -1,9 +1,10 @@
 import { cors } from "hono/cors";
+import { config } from "../../../config/env";
 
 export const corsMiddleware = cors({
   origin: (origin, c) => {
     const allowed =
-      c.env.ENVIRONMENT === "production"
+      config.ENVIRONMENT === "production"
         ? ["https://lumino.kholishafid.com", "https://lumino.pages.dev"]
         : ["http://localhost:5000"];
 
@@ -11,7 +12,7 @@ export const corsMiddleware = cors({
 
     return allowed.includes(origin) ? origin : null;
   },
-  allowHeaders: ["Content-Type", "Authorization"],
+  allowHeaders: ["Content-Type", "Authorization","Origin"],
   allowMethods: ["POST", "GET", "OPTIONS", "DELETE", "PUT"],
   exposeHeaders: ["Content-Length"],
   maxAge: 600,
