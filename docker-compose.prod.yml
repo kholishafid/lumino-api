@@ -8,4 +8,4 @@ services:
       NODE_ENV: production
       PORT: 3000
     ports:
-      - "${VPS_PORT:-3000}:3000"
+      - "127.0.0.1:${VPS_PORT:-3000}:3000"
